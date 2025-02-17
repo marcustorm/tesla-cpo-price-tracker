@@ -1,54 +1,38 @@
 import requests
 import json
-from datetime import datetime
+import time
+from datetime import datetime, timezone
 
-# Define the API endpoint
 url = "https://www.tesla.com/inventory/api/v1/inventory-results"
 
-# Define the request payload
-payload = {
-    "query": {
-        "model": "m3",
-        "condition": "used",
-        "options": {},
-        "arrangeby": "Price",
-        "order": "asc",
-        "market": "CH",
-        "language": "de",
-        "super_region": "europe",
-        "lng": 8.5417,  # Longitude for Zurich
-        "lat": 47.3769,  # Latitude for Zurich
-        "zip": "8000",  # Postal code for Zurich
-        "range": 0
-    },
-    "offset": 0,
-    "count": 50,
-    "outsideOffset": 0,
-    "outsideSearch": False
-}
-
-# Set headers
 headers = {
-    "Content-Type": "application/json"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    "Accept": "application/json",
+    "Content-Type": "application/json",
 }
 
-# Send the POST request
-response = requests.post(url, headers=headers, data=json.dumps(payload))
+payload = {
+    "query": {},  # Modify based on Tesla's API
+    "options": {},
+}
 
-# Check if the request was successful
-if response.status_code == 200:
-    data = response.json()
-    # Extract vehicle results
-    vehicles = data.get('results', [])
-    if vehicles:
-        # Create a filename with the current date
+# Retry mechanism
+MAX_RETRIES = 5
+for attempt in range(MAX_RETRIES):
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        response.raise_for_status()  # Raises an error for HTTP 4xx/5xx
+        data = response.json()
+        
+        # Save data with UTC timestamp
         date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        filename = f"tesla_used_inventory_{date_str}.json"
-        # Save the data to a JSON file
-        with open(filename, 'w') as f:
-            json.dump(vehicles, f, indent=4)
-        print(f"Data saved to {filename}")
-    else:
-        print("No vehicles found.")
-else:
-    print(f"Failed to retrieve data: {response.status_code}")
+        with open(f"data/{date_str}.json", "w") as file:
+            json.dump(data, file, indent=2)
+        
+        print("✅ Data scraped successfully!")
+        break  # Exit loop on success
+
+    except requests.exceptions.RequestException as e:
+        print(f"⚠️ Attempt {attempt + 1} failed: {e}")
+        time.sleep(5)  # Wait before retrying
+
