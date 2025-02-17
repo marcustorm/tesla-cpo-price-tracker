@@ -42,7 +42,7 @@ if response.status_code == 200:
     vehicles = data.get('results', [])
     if vehicles:
         # Create a filename with the current date
-        date_str = datetime.now().strftime("%Y-%m-%d")
+        date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         filename = f"tesla_used_inventory_{date_str}.json"
         # Save the data to a JSON file
         with open(filename, 'w') as f:
